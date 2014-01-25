@@ -3,7 +3,7 @@ require './lisp'
 
 
 describe '#lisp_eval' do
-  describe "CHALLENGE 1", pending: true do
+  describe "CHALLENGE 1" do
     it "lisp_evaluates numbers" do
       lisp_eval("1").should == 1
     end
@@ -13,7 +13,7 @@ describe '#lisp_eval' do
     end
   end
 
-  describe "CHALLENGE 2", pending: true  do
+  describe "CHALLENGE 2" do
     it "lisp_evaluates addition" do
       lisp_eval("(+ 1 2)").should == 3
     end
@@ -23,41 +23,41 @@ describe '#lisp_eval' do
     end
   end
 
-  describe "CHALLENGE 3", pending: true  do
+  describe "CHALLENGE 3" do
     it "lisp_evaluates nested arithmetic" do
       lisp_eval("(+ 1 (* 2 3))").should == 7
     end
   end
 
-  describe "CHALLENGE 4", pending: true  do
+  describe "CHALLENGE 4"  do
     it "lisp_evaluates conditionals" do
-      lisp_eval("(if #t then 1 else 2)").should == 1
-      lisp_eval("(if #f then #t else #f)").should == false
+      lisp_eval("(if #t 1 2)").should == 1
+      lisp_eval("(if #f #t #f)").should == false
     end
   end
 
-  describe "CHALLENGE 5", pending: true  do
+  describe "CHALLENGE 5"  do
     it "lisp_evaluates top-level defs" do
       lisp_eval("(def x 3)
                  (+ x 1)").should == 4
     end
   end
 
-  describe "CHALLENGE 6", pending: true  do
+  describe "CHALLENGE 6"  do
     it "lisp_evaluates simple `let` bindings" do
       lisp_eval("(let (x 3)
                    x)").should == 3
     end
   end
 
-  describe "CHALLENGE 7", pending: true  do
+  describe "CHALLENGE 7"  do
     it "lisp_evaluates let bindings with a more sophisticated body" do
       lisp_eval("(let (x 3)
                    (+ x 1))").should == 4
     end
   end
 
-  describe "CHALLENGE 8", pending: true  do
+  describe "CHALLENGE 8"  do
     it "lisp_evaluates let bindings with multiple variables" do
       lisp_eval("(let (x 3
                        y 4)
@@ -65,7 +65,7 @@ describe '#lisp_eval' do
     end
   end
 
-  describe "CHALLENGE 9", pending: true  do
+  describe "CHALLENGE 9"  do
     it "lisp_evaluates function definitions with single variables" do
       code = "(defn add2 (x)
                 (+ x 2))
@@ -76,7 +76,7 @@ describe '#lisp_eval' do
     end
   end
 
-  describe "CHALLENGE 10", pending: true  do
+  describe "CHALLENGE 10"  do
     it "lisp_evaluates function definitions with multiple variables" do
       code = "(defn maybeAdd2 (bool x)
                 (if bool
