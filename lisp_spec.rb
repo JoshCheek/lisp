@@ -83,7 +83,7 @@ describe '#lisp_eval' do
                   (+ x 2)
                   x))
 
-              (+ (maybeAdd2 1 #t) (maybeAdd2 1 #f))"
+              (+ (maybeAdd2 #t 1) (maybeAdd2 #f 1))"
 
       lisp_eval(code).should == 4
     end
