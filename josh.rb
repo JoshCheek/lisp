@@ -62,11 +62,12 @@ class Lisp
         end
       }],
       :let => [:fn, -> lst {
-        # FIXME: should be in a separate scope, should go away after evaluating the body
-        (_list, name_val), body = lst
-        name_ast, val_ast = name_val
-        _sym, name = name_ast
-        @defs[name] = val_ast
+        let_asts, body = lst
+        _list, lets = let_asts
+        lets.each_cons(2) do |(_sym, name), val_ast|
+          # FIXME: should be in a separate scope, should go away after evaluating the body
+          @defs[name] = val_ast
+        end
         eval body
       }]
     }
@@ -178,30 +179,25 @@ RSpec.describe 'Challenges' do
                      x)", 3
     end
   end
+
+  describe 'Challenge 7' do
+    it 'evaluates more sophisticated `let` bindings' do
+      assert_eval "(let (x 3)
+                     (+ x 1))", 4
+    end
+  end
+
+  describe 'Challenge 8' do
+    it 'evaluates `let` bindings with multiple variables' do
+      assert_eval "(let (x 3
+                      y 4)
+                     (+ x y))", 7
+    end
+  end
 end
 
+
 __END__
-
-
-## Challenge 7
-
-Evaluate more sophisticated `let` bindings:
-
-```
-lisp_eval("(let (x 3)
-             (+ x 1))").should == 4
-```
-
-## Challenge 8
-
-Evaluate `let` bindings with multiple variables:
-
-```
-lisp_eval("(let (x 3
-                 y 4)
-             (+ x y))").should == 7
-```
-
 ## Challenge 9
 
 Evaluate function definitions:
