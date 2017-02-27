@@ -53,6 +53,9 @@ class Lisp
       args.reduce(0, :+)
     elsif name == :*
       args.reduce(1, :*)
+    elsif name == :if
+      cond, true_case, false_case = args
+      eval(cond) ? eval(true_case) : eval(false_case)
     else
       require "pry"
       binding.pry
@@ -99,17 +102,17 @@ RSpec.describe 'Challenges' do
       assert_eval "(+ 1 (* 2 3))", 7
     end
   end
+
+  describe 'Challenge 4' do
+    it 'evaluates conditionals' do
+      assert_eval "(if #t 1 2)", 1
+      assert_eval "(if #f 1 2)", 2
+      assert_eval "(if #f #t #f)", false
+    end
+  end
 end
 
 __END__
-## Challenge 4
-
-Evaluate conditionals:
-
-```
-lisp_eval("(if #t 1 2)").should == 1
-lisp_eval("(if #f #t #f)").should == false
-```
 
 
 ## Challenge 5
