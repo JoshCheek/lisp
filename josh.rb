@@ -18,8 +18,6 @@ class Lisp
     case
     when scanner.eos?
       # does this actually happe?
-      require "pry"
-      binding.pry
       [:bool, nil]
     when scanner.scan(/#t\b/)
       [:bool, true]
@@ -30,16 +28,14 @@ class Lisp
     when scanner.scan(/\(/)
       list = []
       loop do
-        scanner.scan(/\s+/) # whitespace
+        scanner.scan(/[\s\n]+/) # whitespace
         break if scanner.scan(/\)/)
         list << scan_for_ast(scanner)
       end
       [:list, list]
-    when scanner.scan(/\S+/)
+    when scanner.scan(/[^ )]+/)
       [:sym, scanner.matched.intern]
     else
-      require "pry"
-      binding.pry
       raise "Can't scan #{scanner.rest}"
     end
   end
@@ -65,6 +61,14 @@ class Lisp
           binding.pry
         end
       }],
+      :let => [:fn, -> lst {
+        # FIXME: should be in a separate scope, should go away after evaluating the body
+        (_list, name_val), body = lst
+        name_ast, val_ast = name_val
+        _sym, name = name_ast
+        @defs[name] = val_ast
+        eval body
+      }]
     }
   end
 
@@ -87,10 +91,29 @@ class Lisp
     when :fn
       val
     else
-      # require "pry"
-      # binding.pry
+      require "pry"
+      binding.pry
     end
   end
+
+  # def quote(ast)
+  #   type, val = ast
+  #   case type
+  #   when :program
+  #     require "pry"
+  #     binding.pry
+  #   when :bool, :int, :sym
+  #     val
+  #   when :list
+  #     val.map { |e| quote e }
+  #   when :fn
+  #     require "pry"
+  #     binding.pry
+  #   else
+  #     require "pry"
+  #     binding.pry
+  #   end
+  # end
 end
 
 
@@ -148,18 +171,17 @@ RSpec.describe 'Challenges' do
                    (+ x 1)", 4
     end
   end
+
+  describe 'Challenge 6' do
+    it 'evaluates simple `let` bindings' do
+      assert_eval "(let (x 3)
+                     x)", 3
+    end
+  end
 end
 
 __END__
 
-## Challenge 6
-
-Evaluate simple `let` bindings:
-
-```
-lisp_eval("(let (x 3)
-             x)").should == 3
-```
 
 ## Challenge 7
 
