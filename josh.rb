@@ -2,38 +2,60 @@ require 'strscan'
 
 class Lisp
   def self.eval(str)
-    ast = parse str
-    Lisp.new.eval(ast)
+    Lisp.new.eval(parse str)
   end
 
   def self.parse(str)
-    lex tokenize str
+    scan_for_ast StringScanner.new(str)
   end
 
-  def self.tokenize(str)
-    scanner = StringScanner.new(str)
-    tokens  = []
-    until scanner.eos?
-      case
-      when scanner.scan(/\d+/)
-        tokens << scanner.matched.to_i
-      when scanner.scan(/#t\b/)
-        tokens << true
-      when scanner.scan(/#f\b/)
-        tokens << false
-      else
-        raise "Can't scan #{scanner.rest}"
+  def self.scan_for_ast(scanner)
+    case
+    when scanner.eos?
+      nil
+    when scanner.scan(/\d+/)
+      scanner.matched.to_i
+    when scanner.scan(/#t\b/)
+      true
+    when scanner.scan(/#f\b/)
+      false
+    when scanner.scan(/\(/)
+      list = []
+      loop do
+        scanner.scan(/\s+/) # whitespace
+        break if scanner.scan(/\)/)
+        list << scan_for_ast(scanner)
       end
+      list
+    when scanner.scan(/\S+/)
+      scanner.matched.intern
+    else
+      require "pry"
+      binding.pry
+      raise "Can't scan #{scanner.rest}"
     end
-    tokens
-  end
-
-  def self.lex(tokens)
-    tokens
   end
 
   def eval(ast)
-    ast.first
+    if ast.kind_of? Array
+      eval_list ast
+    else
+      ast
+    end
+  end
+
+  private
+
+  def eval_list(list)
+    name, *args = list
+    if name == :+
+      args.reduce(0, :+)
+    elsif name == :*
+      args.reduce(1, :*)
+    else
+      require "pry"
+      binding.pry
+    end
   end
 end
 
@@ -60,7 +82,7 @@ RSpec.describe 'Challenges' do
   end
 
   describe 'Challenge 2' do
-    it 'evaluates simple addition' do
+    it 'evaluates simple addition', t:true do
       assert_eval "(+ 1)", 1
       assert_eval "(+ 1 2)", 3
       assert_eval "(+ 1 2 10)", 13
