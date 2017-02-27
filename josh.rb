@@ -41,35 +41,44 @@ class Lisp
   end
 
   def initialize
-    @defs = {
-      :+  => [:fn, -> lst {
+    @stack = []
+    @stack << {
+      :+  => [:fn_internal, -> lst {
         lst.map { |a| eval a }.reduce(0, :+)
       }],
-      :*  => [:fn, -> lst {
+      :*  => [:fn_internal, -> lst {
         lst.map { |a| eval a }.reduce(1, :*)
       }],
-      :if => [:fn, -> lst {
+      :if => [:fn_internal, -> lst {
         cond, true_case, false_case = lst
         eval(cond) ? eval(true_case) : eval(false_case)
       }],
-      :def => [:fn, -> lst {
+      :def => [:fn_internal, -> lst {
         (name_type, name), body = lst
         if name_type == :sym
-          @defs[name] = body
+          @stack.last[name] = body
         else
           require "pry"
           binding.pry
         end
       }],
-      :let => [:fn, -> lst {
+      :let => [:fn_internal, -> lst {
         let_asts, body = lst
         _list, lets = let_asts
         lets.each_cons(2) do |(_sym, name), val_ast|
           # FIXME: should be in a separate scope, should go away after evaluating the body
-          @defs[name] = val_ast
+          # is it supposed to evaluate the value now or later?
+          @stack.last[name] = val_ast
         end
         eval body
-      }]
+      }],
+      :defn => [:fn_internal, -> lst {
+        (_sym, name), (_list, args), body = lst
+        @stack.last[name] = [:fn_lisp, {
+          args: args.map { |_sym, arg| arg },
+          body: body,
+        }]
+      }],
     }
   end
 
@@ -78,43 +87,42 @@ class Lisp
     case type
     when :program
       val.reduce(nil) { |_, child| eval child }
-    when :bool, :int
+    when :bool, :int, :immediate
       val
     when :sym
-      unless @defs.key? val
+      body = find_named val
+      unless body
         require "pry"
         binding.pry
       end
-      eval @defs.fetch(val)
+      eval body
     when :list
       first, *rest = val
       eval(first).call(rest)
-    when :fn
+    when :fn_internal
       val
+    when :fn_lisp
+      -> lst {
+        args = val[:args].zip(lst.map { |a| [:immediate, eval(a)] }).to_h
+        @stack << args
+        result = eval val[:body]
+        @stack.pop
+        result
+      }
     else
       require "pry"
       binding.pry
     end
   end
 
-  # def quote(ast)
-  #   type, val = ast
-  #   case type
-  #   when :program
-  #     require "pry"
-  #     binding.pry
-  #   when :bool, :int, :sym
-  #     val
-  #   when :list
-  #     val.map { |e| quote e }
-  #   when :fn
-  #     require "pry"
-  #     binding.pry
-  #   else
-  #     require "pry"
-  #     binding.pry
-  #   end
-  # end
+  private
+
+  def find_named(val)
+    @stack.reverse_each do |binding|
+      return binding.fetch val if binding.key? val
+    end
+    nil
+  end
 end
 
 
@@ -194,22 +202,21 @@ RSpec.describe 'Challenges' do
                      (+ x y))", 7
     end
   end
+
+  describe 'Challenge 9' do
+    it 'evaluates function definitions' do
+      code = "(defn add2 (x)
+                (+ x 2))
+
+              (add2 9)"
+
+      assert_eval code, 11
+    end
+  end
 end
 
 
 __END__
-## Challenge 9
-
-Evaluate function definitions:
-
-```
-code = "(defn add2 (x)
-          (+ x 2))
-
-        (add2 9)"
-
-lisp_eval(code).should == 1
-```
 
 ## CHALLENGE 10
 Evaluates function definitions with multiple variables:
