@@ -14,6 +14,7 @@ class Lisp
   end
 
   def self.scan_for_ast(scanner)
+    scanner.scan(/\s+/)
     case
     when scanner.eos?
       # does this actually happe?
@@ -43,45 +44,51 @@ class Lisp
     end
   end
 
+  def initialize
+    @defs = {
+      :+  => [:fn, -> lst {
+        lst.map { |a| eval a }.reduce(0, :+)
+      }],
+      :*  => [:fn, -> lst {
+        lst.map { |a| eval a }.reduce(1, :*)
+      }],
+      :if => [:fn, -> lst {
+        cond, true_case, false_case = lst
+        eval(cond) ? eval(true_case) : eval(false_case)
+      }],
+      :def => [:fn, -> lst {
+        (name_type, name), body = lst
+        if name_type == :sym
+          @defs[name] = body
+        else
+          require "pry"
+          binding.pry
+        end
+      }],
+    }
+  end
+
   def eval(ast)
     type, val = ast
     case type
     when :program
       val.reduce(nil) { |_, child| eval child }
-    when :bool, :sym, :int
+    when :bool, :int
       val
+    when :sym
+      unless @defs.key? val
+        require "pry"
+        binding.pry
+      end
+      eval @defs.fetch(val)
     when :list
-      eval_list val
+      first, *rest = val
+      eval(first).call(rest)
+    when :fn
+      val
     else
       # require "pry"
       # binding.pry
-    end
-  end
-
-  private
-
-  def initialize
-    @fns = {}
-  end
-
-  def eval_list(list)
-    first, *rest = list
-    name = eval first
-    if name == :+
-      args = rest.map { |arg| eval arg }
-      args.reduce(0, :+)
-    elsif name == :*
-      args = rest.map { |arg| eval arg }
-      args.reduce(1, :*)
-    elsif name == :if
-      cond, true_case, false_case = rest
-      eval(cond) ? eval(true_case) : eval(false_case)
-    elsif name == :def
-      name, body = args
-      @fns[name] = body
-    else
-      require "pry"
-      binding.pry
     end
   end
 end
@@ -90,6 +97,7 @@ end
 
 require 'rspec/autorun'
 RSpec.configure do |config|
+  config.formatter = 'documentation'
   config.fail_fast = true
 end
 RSpec.describe 'Challenges' do
@@ -134,7 +142,7 @@ RSpec.describe 'Challenges' do
     end
   end
 
-  describe 'Challenge 5', t:true do
+  describe 'Challenge 5' do
     it 'evaluates top-level definitions' do
       assert_eval "(def x 3)
                    (+ x 1)", 4
