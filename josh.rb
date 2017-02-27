@@ -2,23 +2,30 @@ require 'strscan'
 
 class Lisp
   def self.eval(str)
+    ast = parse str
     Lisp.new.eval(parse str)
   end
 
   def self.parse(str)
-    scan_for_ast StringScanner.new(str)
+    scanner = StringScanner.new(str)
+    bodies = []
+    bodies << scan_for_ast(scanner) until scanner.eos?
+    [:program, bodies]
   end
 
   def self.scan_for_ast(scanner)
     case
     when scanner.eos?
-      nil
-    when scanner.scan(/\d+/)
-      scanner.matched.to_i
+      # does this actually happe?
+      require "pry"
+      binding.pry
+      [:bool, nil]
     when scanner.scan(/#t\b/)
-      true
+      [:bool, true]
     when scanner.scan(/#f\b/)
-      false
+      [:bool, false]
+    when scanner.scan(/\d+/)
+      [:int, scanner.matched.to_i]
     when scanner.scan(/\(/)
       list = []
       loop do
@@ -26,9 +33,9 @@ class Lisp
         break if scanner.scan(/\)/)
         list << scan_for_ast(scanner)
       end
-      list
+      [:list, list]
     when scanner.scan(/\S+/)
-      scanner.matched.intern
+      [:sym, scanner.matched.intern]
     else
       require "pry"
       binding.pry
@@ -37,25 +44,41 @@ class Lisp
   end
 
   def eval(ast)
-    if ast.kind_of? Array
-      eval_list ast
+    type, val = ast
+    case type
+    when :program
+      val.reduce(nil) { |_, child| eval child }
+    when :bool, :sym, :int
+      val
+    when :list
+      eval_list val
     else
-      ast
+      # require "pry"
+      # binding.pry
     end
   end
 
   private
 
+  def initialize
+    @fns = {}
+  end
+
   def eval_list(list)
-    name, *args = list
-    args = args.map { |arg| eval arg }
+    first, *rest = list
+    name = eval first
     if name == :+
+      args = rest.map { |arg| eval arg }
       args.reduce(0, :+)
     elsif name == :*
+      args = rest.map { |arg| eval arg }
       args.reduce(1, :*)
     elsif name == :if
-      cond, true_case, false_case = args
+      cond, true_case, false_case = rest
       eval(cond) ? eval(true_case) : eval(false_case)
+    elsif name == :def
+      name, body = args
+      @fns[name] = body
     else
       require "pry"
       binding.pry
@@ -110,19 +133,16 @@ RSpec.describe 'Challenges' do
       assert_eval "(if #f #t #f)", false
     end
   end
+
+  describe 'Challenge 5', t:true do
+    it 'evaluates top-level definitions' do
+      assert_eval "(def x 3)
+                   (+ x 1)", 4
+    end
+  end
 end
 
 __END__
-
-
-## Challenge 5
-
-Evaluate top-level definitions:
-
-```
-lisp_eval("(def x 3)
-           (+ x 1)").should == 4
-```
 
 ## Challenge 6
 
