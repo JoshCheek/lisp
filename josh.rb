@@ -16,15 +16,10 @@ class Lisp
   def self.scan_for_ast(scanner)
     scanner.scan(/\s+/)
     case
-    when scanner.eos?
-      # does this actually happe?
-      [:bool, nil]
-    when scanner.scan(/#t\b/)
-      [:bool, true]
-    when scanner.scan(/#f\b/)
-      [:bool, false]
-    when scanner.scan(/\d+/)
-      [:int, scanner.matched.to_i]
+    when scanner.scan(/#t\b/)     then [:bool, true]
+    when scanner.scan(/#f\b/)     then [:bool, false]
+    when scanner.scan(/\d+/)      then [:int, scanner.matched.to_i]
+    when scanner.scan(/[^ )\n]+/) then [:sym, scanner.matched.intern]
     when scanner.scan(/\(/)
       list = []
       loop do
@@ -33,16 +28,13 @@ class Lisp
         list << scan_for_ast(scanner)
       end
       [:list, list]
-    when scanner.scan(/[^ )]+/)
-      [:sym, scanner.matched.intern]
     else
       raise "Can't scan #{scanner.rest}"
     end
   end
 
   def initialize
-    @stack = []
-    @stack << {
+    @stack = [{
       :+  => [:fn_internal, -> lst {
         lst.map { |a| eval a }.reduce(0, :+)
       }],
@@ -54,13 +46,8 @@ class Lisp
         eval(cond) ? eval(true_case) : eval(false_case)
       }],
       :def => [:fn_internal, -> lst {
-        (name_type, name), body = lst
-        if name_type == :sym
-          @stack.last[name] = body
-        else
-          require "pry"
-          binding.pry
-        end
+        (_sym, name), body = lst
+        @stack.last[name] = body
       }],
       :let => [:fn_internal, -> lst {
         let_asts, body = lst
@@ -79,7 +66,7 @@ class Lisp
           body: body,
         }]
       }],
-    }
+    }]
   end
 
   def eval(ast)
@@ -213,21 +200,17 @@ RSpec.describe 'Challenges' do
       assert_eval code, 11
     end
   end
+
+  describe 'Challenge 10' do
+    it 'evaluates function definitions with multiple variables' do
+      code = "(defn maybeAdd2 (x bool)
+                (if bool
+                  (+ x 2)
+                  x))
+
+              (+ (maybeAdd2 1 #t) (maybeAdd2 1 #f))"
+
+      assert_eval code, 4
+    end
+  end
 end
-
-
-__END__
-
-## CHALLENGE 10
-Evaluates function definitions with multiple variables:
-
-```
-code = "(defn maybeAdd2 (bool x)
-          (if bool
-            (+ x 2)
-            x))
-
-        (+ (maybeAdd2 1 #t) (maybeAdd2 1 #f))"
-
-lisp_eval(code).should == 4
-```
